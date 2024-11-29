@@ -1,0 +1,820 @@
+---
+title: "第二次作业"
+author: "汤博皓"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+  word_document:
+    toc: true
+  rticles::ctex:
+    fig_caption: true
+    number_sections: true
+    toc: true
+  html_document:
+    code_folding: show
+    fig_caption: true
+    fig_width: 10
+    highlight: tango
+    number_sections: true
+    theme: cosmo
+    toc: true
+keywords:
+- 中文
+- R Markdown
+documentclass: ctexart
+---
+# 导入需要用到的包
+```{r setup, include = FALSE,echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE,error = FALSE, warning = FALSE, message = FALSE,
+                      out.width = "100%", split = FALSE, fig.align = "center")
+#load library
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(scales)
+library(plotly)
+library(patchwork)
+library(ggrepel)
+```
+
+# 第一题：生活大爆炸观众数据分析
+
+# 数据导入
+```{r}
+# 载入数据和预处理
+
+bbt_viewers<- read_csv("./data/BigBangTheory.csv")
+# EDA ---------------------------------------------------------------------
+
+## 如下语句可以解决画图中的中文显示问题，当然你可以用showtext包来解决
+
+theme_set(theme(text = element_text(family="Songti SC",size = 10))) #这里family设置成你系统中的中文字体名。
+
+# 做一些数据预处理，比如把字符型变成factor。
+
+```
+
+- 数据概览
+各变量的简短信息：
+```{r}
+glimpse(bbt_viewers)
+```
+
+各变量的简短统计：
+```{r}
+summary(bbt_viewers)
+```
+
+- 计算观众人数的最小值和最大值。
+```{r}
+# 计算观众人数的最大值
+max_viewers <- max(bbt_viewers$`Viewers (millions)`, na.rm = TRUE)
+
+# 计算观众人数的最小值
+min_viewers <- min(bbt_viewers$`Viewers (millions)`, na.rm = TRUE)
+
+# 打印结果
+cat("观众人数的最大值是：", max_viewers, "百万\n")
+cat("观众人数的最小值是：", min_viewers, "百万\n")
+```
+- 计算平均数、中位数和众数。
+```{r}
+# 计算观众人数的平均数
+mean_viewers <- mean(bbt_viewers$`Viewers (millions)`, na.rm = TRUE)
+
+# 计算观众人数的中位数
+median_viewers <- median(bbt_viewers$`Viewers (millions)`, na.rm = TRUE)
+
+# 计算观众人数的众数
+# 在R中，可以使用table()函数来计算众数
+# 由于众数可能有多个，我们使用which.max()来找到出现次数最多的值
+mode_viewers <- names(which.max(table(bbt_viewers$`Viewers (millions)`)))
+
+# 打印结果
+cat("观众人数的平均数是：", mean_viewers, "百万\n")
+cat("观众人数的中位数是：", median_viewers, "百万\n")
+cat("观众人数的众数是：", mode_viewers, "百万\n")
+```
+- 计算第一和第三四分位数。
+```{r}
+
+# 计算第一四分位数（Q1）
+first_quartile <- quantile(bbt_viewers$`Viewers (millions)`, 0.25, na.rm = TRUE)
+
+# 计算第三四分位数（Q3）
+third_quartile <- quantile(bbt_viewers$`Viewers (millions)`, 0.75, na.rm = TRUE)
+
+# 打印结果
+cat("第一四分位数（Q1）是：", first_quartile, "百万\n")
+cat("第三四分位数（Q3）是：", third_quartile, "百万\n")
+```
+- 2011-2012季度的观众人数是增长还是下降了？
+从图中可以看出来，整体上是下降了
+```{r}
+bbt_viewers <- read.csv("./data/BigBangTheory.csv", stringsAsFactors = FALSE)
+
+# 添加一个索引列，以便按照原始数据顺序连线
+bbt_viewers$index <- 1:nrow(bbt_viewers)
+
+# 使用ggplot2绘制折线图，并按照索引列排序
+ggplot(bbt_viewers, aes(x = Air.Date, y = Viewers..millions., group = index, order = index)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 3) +
+  labs(title = "The Big Bang Theory Viewership Over 2011-2012 Season",
+       x = "Air Date",
+       y = "Viewers (millions)") +
+  theme_minimal()
+
+
+```
+
+
+# 球员得分问题
+- 展示频率分布。
+```{r}
+nba_players <- read.csv("./data/NBAPlayerPts.csv", stringsAsFactors = FALSE)
+
+# 将PPG列转换为数值类型
+nba_players$PPG <- as.numeric(gsub(",", "", nba_players$PPG))
+
+# 定义PPG的类别区间
+breaks <- seq(10, 30, by = 2)
+
+# 计算频率分布
+freq_table <- table(cut(nba_players$PPG, breaks))
+print(freq_table)
+```
+- 展示相对频率分布。
+```{r}
+# 计算相对频率分布
+relative_freq_table <- freq_table / sum(freq_table)
+
+# 打印相对频率分布表
+print(relative_freq_table)
+
+```
+- 展示累积百分比频率分布。
+```{r}
+# 计算累积百分比频率分布
+cumulative_freq_table <- cumsum(freq_table) / sum(freq_table)
+
+# 打印累积百分比频率分布表
+print(cumulative_freq_table)
+```
+- 为每场比赛平均得分开发一个直方图。
+```{r}
+nba_players <- read.csv("./data/NBAPlayerPts.csv", stringsAsFactors = FALSE)
+# 将PPG列转换为数值类型
+nba_players$PPG <- as.numeric(gsub(",", "", nba_players$PPG))
+
+# 绘制直方图
+ggplot(nba_players, aes(x = PPG)) +
+  geom_histogram(binwidth = 2, fill = "steelblue", color = "black") +
+  labs(title = "Histogram of PPG",
+       x = "Points Per Game (PPG)",
+       y = "Number of Players") +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(min(nba_players$PPG), max(nba_players$PPG), by = 2)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # 如果x轴标签太长，可以旋转它们
+
+```
+- 数据是否看起来有偏斜？请解释。
+是有偏斜，原因可能是nba球员中极端优秀的是少数，然后又有很高门槛，所以集中在偏左的区域
+
+- 有多少百分比的球员平均每场比赛得分至少为20分？
+```{r}
+# 计算得分至少为20分的球员数量
+players_20_plus <- sum(nba_players$PPG >= 20, na.rm = TRUE)
+
+# 计算总球员数量
+total_players <- nrow(nba_players)
+
+# 计算百分比
+percentage_20_plus <- (players_20_plus / total_players) * 100
+
+print(percentage_20_plus)
+```
+
+
+
+# 问题3：一位研究人员通过报告调查结果来说明平均数的标准误差是20。总体标准差是500
+- 这项调查中使用的样本有多大？
+```{r}
+# 总体标准差
+sigma <- 500
+
+# 标准误差
+SE <- 20
+
+# 计算样本大小
+n <- (sigma / SE) ^ 2
+
+# 打印样本大小
+cat("The sample size used in this survey was: ", n, "\n")
+```
+- 点估计在总体均值±25范围内的概率是多少？
+```{r}
+# 已知值
+sigma <- 500  # 总体标准差
+SE <- 20      # 标准误差
+margin <- 25   # 点估计与总体均值的偏差
+
+# 计算Z分数
+z_score <- margin / SE
+
+# 使用正态分布的累积分布函数计算概率
+# 计算单侧概率并将其加倍以得到双侧概率
+probability <- 2 * (1 - pnorm(z_score))
+
+# 打印概率
+cat("The probability that the point estimate was within ±25 of the population mean is: ", probability, "\n")
+```
+
+# 问题4 《年轻专业人士》杂志受众分析
+- 开发适当的描述性统计数据来总结数据。
+```{r}
+# 读取CSV文件，假设文件名为"Professional.csv"
+professionals <- read.csv("./data/Professional.csv", stringsAsFactors = FALSE)
+
+# 打印列名以确认正确的列名
+print(colnames(professionals))
+
+# 计算年龄的描述性统计数据
+age_stats <- professionals %>%
+  summarise(
+    Mean = mean(Age, na.rm = TRUE),
+   Median = median(Age, na.rm = TRUE),
+   SD = sd(Age, na.rm = TRUE),
+   Min = min(Age, na.rm = TRUE),
+   Max = max(Age, na.rm = TRUE)
+  )
+
+# 计算家庭收入的描述性统计数据
+income_stats <- professionals %>%
+  summarise(
+    Mean = mean(Household.Income...., na.rm = TRUE),
+   Median = median(Household.Income...., na.rm = TRUE),
+   SD = sd(Household.Income...., na.rm = TRUE),
+   Min = min(Household.Income...., na.rm = TRUE),
+   Max = max(Household.Income...., na.rm = TRUE)
+  )
+
+# 打印统计数据
+print(age_stats)
+print(income_stats)
+
+# 计算众数
+age_mode <- function(x) {
+  uniq_x <- unique(x)
+  uniq_x[which.max(tabulate(match(x, uniq_x)))]
+}
+income_mode <- function(x) {
+  uniq_x <- unique(x)
+  uniq_x[which.max(tabulate(match(x, uniq_x)))]
+}
+
+age_mode_value <- age_mode(professionals$Age)
+income_mode_value <- income_mode(professionals$Household.Income....)
+
+# 打印众数
+cat("Mode of Age: ", age_mode_value, "\n")
+cat("Mode of Household Income: ", income_mode_value, "\n")
+```
+- 为订阅者的平均年龄和家庭收入开发95%置信区间。
+```{r}
+# 计算平均年龄的95%置信区间
+age_mean <- mean(professionals$Age, na.rm = TRUE)
+age_sd <- sd(professionals$Age, na.rm = TRUE)
+age_n <- nrow(professionals)
+age_se <- age_sd / sqrt(age_n)
+age_ci <- c(age_mean - 1.96 * age_se, age_mean + 1.96 * age_se)
+
+# 计算平均家庭收入的95%置信区间
+income_mean <- mean(professionals$Household.Income...., na.rm = TRUE)
+income_sd <- sd(professionals$Household.Income...., na.rm = TRUE)
+income_n <- nrow(professionals)
+income_se <- income_sd / sqrt(income_n)
+income_ci <- c(income_mean - 1.96 * income_se, income_mean + 1.96 * income_se)
+
+# 打印置信区间
+cat("95% CI for Mean Age: [", age_ci[1], ", ", age_ci[2], "]\n")
+cat("95% CI for Mean Household Income: [", income_ci[1], ", ", income_ci[2], "]\n")
+```
+- 为拥有家庭宽带接入的订阅者比例和有孩子的订阅者比例开发95%置信区间。
+```{r}
+# 计算拥有家庭宽带接入的订阅者比例及其95%置信区间
+broad_access <- professionals$`Broadband.Access.`
+broad_access_prop <- mean(broad_access == "Yes", na.rm = TRUE)
+broad_access_se <- sqrt(broad_access_prop * (1 - broad_access_prop) / (nrow(professionals) - 1))
+broad_access_ci <- c(broad_access_prop - 1.96 * broad_access_se, broad_access_prop + 1.96 * broad_access_se)
+
+# 计算有孩子的订阅者比例及其95%置信区间
+have_children <- professionals$`Have.Children.`
+have_children_prop <- mean(have_children == "Yes", na.rm = TRUE)
+have_children_se <- sqrt(have_children_prop * (1 - have_children_prop) / (nrow(professionals) - 1))
+have_children_ci <- c(have_children_prop - 1.96 * have_children_se, have_children_prop + 1.96 * have_children_se)
+
+# 打印比例和置信区间
+cat("Proportion of subscribers with broadband access: ", broad_access_prop, "\n")
+cat("95% CI for broadband access: [", broad_access_ci[1], ", ", broad_access_ci[2], "]\n")
+cat("Proportion of subscribers with children: ", have_children_prop, "\n")
+cat("95% CI for having children: [", have_children_ci[1], ", ", have_children_ci[2], "]\n")
+```
+-《年轻专业人士》会是在线经纪人的好广告渠道吗？用统计数据证明你的结论。
+
+为了评估《年轻专业人士》杂志是否是在线经纪人的好广告渠道，我们需要考虑订阅者的特征，特别是那些可能对在线经纪服务感兴趣的特征。以下是一些可能相关的特征：
+
+家庭收入：高收入家庭可能更有可能投资和使用在线经纪服务。
+金融投资价值：拥有较高金融投资价值的订阅者可能更可能对在线经纪服务感兴趣。
+股票/债券/共同基金交易数量：频繁交易的订阅者可能更倾向于使用在线经纪服务。
+宽带接入：拥有宽带接入的订阅者更可能更可能使用在线服务。
+```{r}
+# 计算对在线经纪服务可能感兴趣的订阅者的特征
+online_broker_interest <- professionals %>%
+  filter(Household.Income.... > median(Household.Income...., na.rm = TRUE) & 
+            Value.of.Investments.... > median(Value.of.Investments...., na.rm = TRUE) &
+            Number.of.Transactions > median(Number.of.Transactions, na.rm = TRUE) &
+            Broadband.Access. == "Yes")
+
+# 计算这些订阅者的比例
+proportion <- nrow(online_broker_interest) / nrow(professionals)
+
+# 打印比例
+cat("Proportion of subscribers potentially interested in online brokerage services: ", proportion, "\n")
+
+# 计算95%置信区间
+proportion_se <- sqrt(proportion * (1 - proportion) / (nrow(professionals) - 1))
+proportion_ci <- c(proportion - 1.96 * proportion_se, proportion + 1.96 * proportion_se)
+
+# 打印置信区间
+cat("95% CI for the proportion: [", proportion_ci[1], ", ", proportion_ci[2], "]\n")
+```
+- 这本杂志会是为销售教育软件和针对幼儿的电脑游戏的公司做广告的好地方吗？
+为了评估《年轻专业人士》杂志是否适合为销售教育软件和针对幼儿的电脑游戏的公司做广告，我们需要考虑订阅者的家庭状况，特别是他们是否有孩子。以下是使用R语言进行评估的步骤：
+
+确定有孩子的订阅者比例。
+计算这个比例的95%置信区间。
+```{r}
+# 计算有孩子的订阅者比例
+have_children_prop <- mean(professionals$`Have.Children.` == "Yes", na.rm = TRUE)
+
+# 计算95%置信区间
+have_children_se <- sqrt(have_children_prop * (1 - have_children_prop) / (nrow(professionals) - 1))
+have_children_ci <- c(have_children_prop - 1.96 * have_children_se, have_children_prop + 1.96 * have_children_se)
+
+# 打印比例和置信区间
+cat("Proportion of subscribers with children:", have_children_prop, "\n")
+cat("95% CI for the proportion of subscribers with children: [", have_children_ci[1], ", ", have_children_ci[2], "]\n")
+```
+- 评论您认为《年轻专业人士》的读者会感兴趣的文章类型。
+根据《年轻专业人士》杂志的目标受众——近期大学毕业生和职业生涯初期的专业人士，我们可以推断出一些可能吸引他们的文章类型,比如职业发展与规划等。
+
+# 问题5： 质量伙伴公司
+- 对每个样本在0.01的显著性水平上进行假设检验，并确定是否应采取任何措施。为每个测试提供p值。
+```{r}
+# 读取CSV文件，假设文件名为"Quality.csv"
+quality_data <- read.csv("./data/Quality.csv", header = TRUE)
+
+# 将数据转换为长格式
+quality_long <- quality_data %>%
+  pivot_longer(cols = starts_with("Sample"), names_to = "Sample", values_to = "Value")
+
+# 定义总体均值和显著性水平
+mu_population <- 12
+alpha <- 0.01
+
+# 对每个样本进行假设检验
+results <- quality_long %>%
+  group_by(Sample) %>%
+  summarise(
+    Sample.Mean = mean(Value, na.rm = TRUE),
+    Sample.Size = n(),
+    t.Value = (Sample.Mean - mu_population) / (sd(Value, na.rm = TRUE) / sqrt(Sample.Size)),
+    p.Value = 2 * pt(-abs(t.Value), df = Sample.Size - 1)
+  )
+
+# 打印结果
+print(results)
+
+# 确定是否应采取任何措施
+results <- results %>%
+  mutate(Corrective.Action = ifelse(p.Value < alpha, "Take Action", "No Action Needed"))
+
+# 打印是否需要采取行动的结果
+print(results)
+```
+- 计算四个样本的每个标准差。假设总体标准差为0.21是否合理？
+```{r}
+# 计算每个样本的标准差
+sample_sds <- quality_long %>%
+  group_by(Sample) %>%
+  summarise(Sample.SD = sd(Value, na.rm = TRUE))
+
+# 打印标准差
+print(sample_sds)
+
+# 检查假设的总体标准差是否合理
+assumed_population_sd <- 0.21
+
+# 打印假设的总体标准差和样本标准差
+cat("Assumed Population SD:", assumed_population_sd, "\n")
+print(sample_sds)
+```
+- 计算样本均值x围绕μ = 12的界限，以便只要新样本均值在这些界限内，流程就被认为是运行令人满意的。如果x超过上限或x低于下限，将采取纠正措施。这些界限被称为质量控制的上下限和下控制限。
+```{r}
+mu <- 12
+
+# 总体标准差
+sigma <- 0.21
+
+# 样本大小
+n <- 30
+
+# Z分数对于99.73%置信水平
+z_score <- qnorm(0.9973)
+
+# 计算控制界限
+UCL <- mu + z_score * (sigma / sqrt(n))
+LCL <- mu - z_score * (sigma / sqrt(n))
+
+# 打印控制界限
+cat("Upper Control Limit (UCL):", UCL, "\n")
+cat("Lower Control Limit (LCL):", LCL, "\n")
+```
+- 讨论将显著性水平更改为较大值的含义。如果显著性水平增加，可能会增加哪种错误或错误？
+
+在统计假设检验中，显著性水平（也称为α水平或第一类错误的概率）是指拒绝零假设（H0）时出错的概率。显著性水平通常设定为0.05、0.01或0.10，这取决于研究领域和研究者对错误容忍度的偏好。
+
+将显著性水平更改为较大值的含义包括：
+
+增加第一类错误的风险：第一类错误是指错误地拒绝了真实的零假设。当显著性水平增加时，我们更有可能犯这种错误。例如，如果我们将显著性水平从0.05增加到0.2，我们拒绝零假设的概率增加，即使零假设实际上是真的。
+
+降低检验的统计功效：统计功效是指正确拒绝错误的零假设（H1）的概率。显著性水平增加，统计功效降低，意味着我们更有可能未能检测到实际存在的效果或差异。
+
+增加第二类错误的风险：第二类错误是指未能拒绝一个假的零假设。虽然增加显著性水平并不直接影响第二类错误，但通常为了保持一定的统计功效，我们可能会减少样本大小或增加效应大小，这间接增加了第二类错误的风险。
+
+# 问题6:度假房产已出租和未出租的单元情况
+- 估算 2007 年 3 月第一周和 2008 年 3 月第一周期间已出租单元的比例。
+```{r}
+# 加载必要的包
+library(dplyr)
+
+# 读取CSV文件，假设文件名为"Occupancy.csv"
+data <- read.csv("./data/Occupancy.csv", header = FALSE, stringsAsFactors = FALSE)
+
+# 重命名列
+colnames(data) <- c("Mar_07", "Mar_08")
+
+# 计算2007年和2008年出租单位的比例
+prop_07 <- sum(data$Mar_07 == "Yes") / nrow(data)
+prop_08 <- sum(data$Mar_08 == "Yes") / nrow(data)
+
+# 输出结果
+cat("2007年3月第一周出租单位的比例为：", prop_07, "\n")
+cat("2008年3月第一周出租单位的比例为：", prop_08, "\n")
+```
+- 给出这两个比例差异的 95% 置信区间。
+```{r}
+# 读取数据
+data <- read.csv("./data/Occupancy.csv", header = FALSE, stringsAsFactors = FALSE)
+
+# 重命名列
+colnames(data) <- c("Mar_07", "Mar_08")
+
+# 计算2007年和2008年出租单位的数量
+count_07 <- sum(data$Mar_07 == "Yes")
+count_08 <- sum(data$Mar_08 == "Yes")
+
+# 计算总单位数量
+n_07 <- nrow(data)
+n_08 <- nrow(data)
+
+# 使用prop.test函数计算比例差异的95%置信区间
+test <- prop.test(c(count_07, count_08), c(n_07, n_08), conf.level = 0.95)
+
+# 输出结果
+cat("2007年和2008年出租单位比例差异的95%置信区间为：", test$conf.int, "\n")
+```
+- 根据你的研究结果，2008 年 3 月的出租率看起来是否会比一年前（即 2007 年 3 月）有所上升？
+```{r}
+# 检查95%置信区间
+if (test$conf.int[1] > 0) {
+  cat("2008年3月的出租率显著高于2007年3月。\n")
+} else if (test$conf.int[2] < 0) {
+  cat("2008年3月的出租率显著低于2007年3月。\n")
+} else {
+  cat("没有足够的证据表明2008年3月的出租率与2007年3月有显著差异。\n")
+}
+```
+
+# 问题7:空军训练计划
+- 使用适当的描述性统计来总结每种方法的训练时间数据。你从样本数据中观察到什么相似之处或差异？
+```{r}
+# 读取数据
+data <- read.csv("./data/Training.csv", header = FALSE, stringsAsFactors = FALSE)
+
+# 重命名列
+colnames(data) <- c("Current", "Proposed")
+
+# 将数据转换为数值类型
+data$Current <- as.numeric(data$Current)
+data$Proposed <- as.numeric(data$Proposed)
+
+# 计算描述性统计量
+summary_current <- summary(data$Current)
+summary_proposed <- summary(data$Proposed)
+
+# 输出描述性统计量
+cat("Current Method Descriptive Statistics:\n")
+print(summary_current)
+cat("\nProposed Method Descriptive Statistics:\n")
+print(summary_proposed)
+
+# 绘制箱线图以观察数据分布
+boxplot(data$Current, data$Proposed, main="Training Time by Method", ylab="Hours", xlab="Method")
+```
+- 对两种方法的总体均值之间的差异发表评论。讨论你的发现。
+均值差不多
+```{r}
+# 重命名列
+colnames(data) <- c("Current", "Proposed")
+
+# 将数据转换为数值类型
+data$Current <- as.numeric(data$Current)
+data$Proposed <- as.numeric(data$Proposed)
+
+# 计算两种方法的均值
+mean_current <- mean(data$Current)
+mean_proposed <- mean(data$Proposed)
+
+# 输出均值
+cat("Current Method Mean Training Time: ", mean_current, " hours\n")
+cat("Proposed Method Mean Training Time: ", mean_proposed, " hours\n")
+
+# 进行t检验比较两种方法的均值
+t_test <- t.test(data$Current, data$Proposed, var.equal = TRUE)
+
+# 输出t检验结果
+cat("\nT-test results for comparing means:\n")
+print(t_test)
+```
+- 计算每种训练方法的标准差和方差。对两种训练方法的总体方差是否相等进行假设检验。讨论你的发现。
+第一种标准差和方差大，第二种标准差和方差小。所以第二种训练方式更稳定。
+```{r}
+# 重命名列
+colnames(data) <- c("Current", "Proposed")
+
+# 将数据转换为数值类型
+data$Current <- as.numeric(data$Current)
+data$Proposed <- as.numeric(data$Proposed)
+
+# 计算两种方法的标准差和方差
+sd_current <- sd(data$Current)
+var_current <- var(data$Current)
+sd_proposed <- sd(data$Proposed)
+var_proposed <- var(data$Proposed)
+
+# 输出标准差和方差
+cat("Current Method Standard Deviation: ", sd_current, "\n")
+cat("Current Method Variance: ", var_current, "\n")
+cat("Proposed Method Standard Deviation: ", sd_proposed, "\n")
+cat("Proposed Method Variance: ", var_proposed, "\n")
+
+# 进行F检验比较两种方法的方差
+f_test <- var.test(data$Current, data$Proposed)
+
+# 输出F检验结果
+cat("\nF-test results for comparing variances:\n")
+print(f_test)
+```
+- 你能否得出关于两种方法之间差异的结论？你的建议是什么？解释。
+第一种方法能够训练出特别优秀的，但是效果不稳定。第二种方法成果比较稳定。
+我建议取长补短，选用第二种方法为主，但借鉴第一种方法优化成绩的点。
+
+- 在做出未来要使用的培训计划的最终决定之前，你能建议其他数据或测试吗？
+最好还有训练效率的数据。
+
+
+
+# 问题8：2007年款凯美瑞的汽车里程与销售价格之间的关系
+- 绘制一个散点图，将汽车里程放在水平轴上，价格放在垂直轴上。
+```{r}
+# 读取数据，忽略表头
+data <- read.csv("./data/Camry.csv", header = FALSE)
+
+# 重新设置列名
+colnames(data) <- c("Miles", "Price")
+
+# 提取里程和价格数据，并转换为数值类型
+data$Miles <- as.numeric(gsub("Miles \\(1000s\\): ", "", data$Miles))
+data$Price <- as.numeric(gsub("Price \\(\\$1000s\\): ", "", data$Price))
+
+# 使用ggplot2绘制散点图
+ggplot(data, aes(x = Miles, y = Price)) +
+  geom_point() +
+  xlab("Miles (1000s)") +
+  ylab("Price ($1000s)") +
+  ggtitle("Scatter Plot of Camry Price vs. Mileage")
+```
+- 在部分(a)中开发的散点图表明了这两个变量之间的关系是什么？
+
+两个变量之间似乎存在一种可以通过直线近似的负相关关系。也可以认为这种关系可能是曲线的，因为到了某个时候，汽车的里程数太多，其价值会变得非常小。
+
+- 开发一个估计的回归方程，用于预测给定里程（千英里）的价格（千美元）。
+```{r}
+# 拟合线性回归模型
+model <- lm(Price ~ Miles, data = data)
+
+# 输出回归方程的系数
+cat("Estimated Regression Equation:\n")
+cat("Price = ", coef(model)[1], " + ", coef(model)[2], " * Miles\n")
+
+# 使用summary函数查看模型的详细统计信息
+summary(model)
+```
+- 在0.05的显著性水平下测试关系的显著性。
+```{r}
+# 拟合线性回归模型
+model <- lm(Price ~ Miles, data = data)
+
+# 使用summary函数查看模型的详细统计信息
+summary_model <- summary(model)
+
+# 输出p值
+cat("P-value for the slope:", summary_model$coefficients[2, 4], "\n")
+
+# 判断p值是否小于0.05
+if (summary_model$coefficients[2, 4] < 0.05) {
+  cat("The relationship between miles and price is significant at the 0.05 level.\n")
+} else {
+  cat("The relationship between miles and price is not significant at the 0.05 level.\n")
+}
+```
+- 估计的回归方程是否提供了良好的拟合？解释。
+没有很好的拟合，因为有其他更重要的影响因素，比如原车价。
+
+- 解释估计回归方程的斜率。
+表示年份的折价率。
+
+- 假设你正在考虑购买一辆已经行驶了60,000英里的2007年款二手车凯美瑞。使用部分(c)中开发的估计回归方程，预测这辆车的价格。这是你会向卖家提供的价格吗？
+价格太低了，不是我愿意的价格。
+```{r}
+model <- lm(Price ~ Miles, data = data)
+
+# 预测60,000英里（即60千英里）的价格
+predicted_price <- predict(model, newdata = data.frame(Miles = 60))
+
+# 输出预测价格
+cat("Predicted price for a 2007 Camry with 60,000 miles: $", predicted_price, " (in thousands)\n")
+```
+
+# 问题9：服务商的客户流失数据
+- 通过可视化探索流失客户与⾮流失客户的⾏为特点（或特点对⽐），你能发现流失与⾮流失客
+户⾏为在哪些指标有可能存在显著不同？
+```{r}
+# 加载必要的库
+library(readxl)
+library(ggplot2)
+library(dplyr)
+
+# 读取数据
+data <- read_excel("./data/WE.xlsx")
+
+# 数据预处理
+# 检查是否有缺失值
+summary(data)
+
+# 假设数据已经清洗完毕，我们可以继续进行可视化
+
+# 将流失和非流失客户分开
+non_churn <- data[data$流失 == 0, ]
+churn <- data[data$流失 == 1, ]
+
+# 可视化比较
+# 可以使用ggplot2包来创建箱线图或小提琴图
+
+# 客户幸福指数
+ggplot(data, aes(x = factor(流失), y = 当月客户幸福指数)) +
+  geom_boxplot() +
+  labs(title = "客户幸福指数对比", x = "流失状态", y = "客户幸福指数")
+
+# 客户支持
+ggplot(data, aes(x = factor(流失), y = 当月客户支持)) +
+  geom_boxplot() +
+  labs(title = "客户支持对比", x = "流失状态", y = "客户支持")
+
+# 服务优先级
+ggplot(data, aes(x = factor(流失), y = 当月服务优先级)) +
+  geom_boxplot() +
+  labs(title = "服务优先级对比", x = "流失状态", y = "服务优先级")
+
+# 登录次数
+ggplot(data, aes(x = factor(流失), y = 当月登录次数)) +
+  geom_boxplot() +
+  labs(title = "登录次数对比", x = "流失状态", y = "登录次数")
+
+# 访问次数增加
+ggplot(data, aes(x = factor(流失), y = 访问次数相比上月的增加)) +
+  geom_boxplot() +
+  labs(title = "访问次数增加对比", x = "流失状态", y = "访问次数增加")
+
+# 客户使用期限
+ggplot(data, aes(x = factor(流失), y = 客户使用期限)) +
+  geom_boxplot() +
+  labs(title = "客户使用期限对比", x = "流失状态", y = "客户使用期限")
+
+# 访问间隔变化
+ggplot(data, aes(x = factor(流失), y = 访问间隔变化)) +
+  geom_boxplot() +
+  labs(title = "访问间隔变化对比", x = "流失状态", y = "访问间隔变化")
+```
+- 通过均值⽐较的⽅式验证上述不同是否显著。
+```{r}
+# 将流失和非流失客户分开
+non_churn <- data[data$流失 == 0, ]
+churn <- data[data$流失 == 1, ]
+
+# 定义一个函数来计算均值差异和进行t检验
+compare_means <- function(group1, group2, var) {
+  mean1 <- mean(group1[[var]], na.rm = TRUE)
+  mean2 <- mean(group2[[var]], na.rm = TRUE)
+  t_test <- t.test(group1[[var]], group2[[var]], var.equal = TRUE)
+  list(
+    mean1 = mean1,
+    mean2 = mean2,
+    p_value = t_test$p.value,
+    diff = mean1 - mean2
+  )
+}
+
+# 比较指标
+results <- list()
+
+# 客户幸福指数
+results$当月客户幸福指数 <- compare_means(non_churn, churn, "当月客户幸福指数")
+
+# 客户支持
+results$当月客户支持 <- compare_means(non_churn, churn, "当月客户支持")
+
+# 服务优先级
+results$当月服务优先级 <- compare_means(non_churn, churn, "当月服务优先级")
+
+# 登录次数
+results$当月登录次数 <- compare_means(non_churn, churn, "当月登录次数")
+
+# 访问次数增加
+results$访问次数相比上月的增加 <- compare_means(non_churn, churn, "访问次数相比上月的增加")
+
+# 客户使用期限
+results$客户使用期限 <- compare_means(non_churn, churn, "客户使用期限")
+
+# 访问间隔变化
+results$访问间隔变化 <- compare_means(non_churn, churn, "访问间隔变化")
+
+# 打印结果
+print(results)
+```
+- 以”流失“为因变量，其他你认为重要的变量为⾃变量（提示：a、b两步的发现），建⽴回归⽅
+程对是否流失进⾏预测。
+```{r}
+
+# 数据预处理
+# 将流失变量转换为因子类型，其中0表示未流失，1表示流失
+data$流失 <- factor(data$流失, levels = c(0, 1))
+
+# 建立逻辑回归模型
+# 使用glm()函数，family = binomial(link = "logit")指定逻辑回归
+model <- glm(流失 ~ 当月客户幸福指数 + 客户使用期限, data = data, family = binomial(link = "logit"))
+
+# 查看模型的摘要信息
+summary(model)
+```
+- 根据上⼀步预测的结果，对尚未流失（流失=0）的客户进⾏流失可能性排序，并给出流失可能
+性最⼤的前100名⽤户ID列表。
+```{r}
+# 数据预处理
+# 将流失变量转换为因子类型，其中0表示未流失，1表示流失
+data$流失 <- factor(data$流失, levels = c(0, 1))
+
+# 建立逻辑回归模型
+model <- glm(流失 ~ 当月客户幸福指数 + 客户使用期限, data = data, family = binomial(link = "logit"))
+
+# 预测尚未流失客户（流失=0）的流失可能性
+# 新建一个预测数据框，只包含未流失的客户
+predict_data <- data[data$流失 == 0, ]
+
+# 使用模型进行预测
+predict_data$predicted_prob <- predict(model, newdata = predict_data, type = "response")
+
+# 对预测结果进行排序，得到流失可能性最大的前100名用户
+top100 <- predict_data %>%
+  arrange(desc(predicted_prob)) %>%
+  head(100)
+
+# 提取用户ID列表
+top100_user_ids <- top100$客户ID
+
+# 打印前100名用户ID列表
+print(top100_user_ids)
+```
